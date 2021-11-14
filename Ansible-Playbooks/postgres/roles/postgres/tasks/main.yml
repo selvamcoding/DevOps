@@ -44,7 +44,7 @@
   with_items:
     - {old: 'prefix=', new: "prefix={{ install_dir }}" }
     - {old: 'PGDATA=', new: "PGDATA=\"{{ install_dir }}/data\"" }
-    - {old: 'PGLOG=', new: "PGLOG=\"{{ install_dir }}/logs/pgsql.log\"" }
+    - {old: 'PGLOG=',  new: "PGLOG=\"{{ install_dir }}/logs/pgsql.log\"" }
 
 - name: remove postgres source package
   file: path={{ download_dir }}/{{ postgres_pkg }} state=absent
