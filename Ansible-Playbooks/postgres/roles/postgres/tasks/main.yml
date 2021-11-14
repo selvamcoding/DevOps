@@ -1,0 +1,50 @@
+- name: creating local postgres user
+  user: name={{ user }} state=present
+
+- name: installing dependency packages for postgres
+  yum: name={{ item }} state=present
+  with_items:
+    - gcc
+    - zlib
+    - zlib-devel
+    - readline-devel
+    - pam-devel
+    - bison
+    - flex
+    - openldap-devel
+
+- name: creating the postgres directories
+  file: path={{ install_dir }}/{{ item }} state=directory owner={{user}} group={{group}} mode=0755
+  with_items:
+    - "data"
+    - "logs"
+
+- name: unarchiving postgres package
+  unarchive: src=https://ftp.postgresql.org/pub/source/v{{ postgres_version }}/{{ postgres_pkg }}.tar.gz dest={{ download_dir }} owner={{ user }} group={{ group }} remote_src=True
+
+- name: installing & configuring postgres
+  shell: cd {{ download_dir }}/{{ postgres_pkg }} && ./configure --prefix={{ install_dir }} --with-ldap --with-pam {{ extra_args }} && gmake -j 20 && gmake install
+
+- name: configuring postgres
+  shell: cd {{ download_dir }}/{{ postgres_pkg }}/contrib/ && make && make install 
+
+- name: Initialize Postgres DB
+  shell: "{{ install_dir }}/bin/initdb -D {{ install_dir }}/data"
+  become: yes
+  become_user: "{{ user }}"
+
+- name: change listen address
+  lineinfile: dest={{ install_dir }}/data/postgresql.conf regex='listen_addresses' line="listen_addresses = '*'"
+
+- name: copy startup script
+  copy: src={{ download_dir }}/{{ postgres_pkg }}/contrib/start-scripts/linux dest=/etc/rc.d/init.d/postgresql remote_src=True owner={{ user }} group={{ group }} mode=0755
+
+- name: modifying startup script
+  lineinfile: dest=/etc/rc.d/init.d/postgresql regex={{ item.old }} line={{ item.new }}
+  with_items:
+    - {old: 'prefix=', new: "prefix={{ install_dir }}" }
+    - {old: 'PGDATA=', new: "PGDATA=\"{{ install_dir }}/data\"" }
+    - {old: 'PGLOG=', new: "PGLOG=\"{{ install_dir }}/logs/pgsql.log\"" }
+
+- name: remove postgres source package
+  file: path={{ download_dir }}/{{ postgres_pkg }} state=absent

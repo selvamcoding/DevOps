@@ -1,7 +1,7 @@
 ---
 user: "nginx"
 group: "{{ user }}"
-nginx_version: "1.21.4"
+nginx_version: "nginx-1.21.4"
 install_dir: "/data/nginx"
 download_dir: "/data"
 extra_args: ""

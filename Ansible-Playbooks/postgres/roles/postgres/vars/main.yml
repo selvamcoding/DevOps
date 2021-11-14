@@ -1,0 +1,8 @@
+---
+user: "postgres"
+group: "{{ user }}"
+postgres_version: "14.0"
+postgres_pkg: "postgresql-{{ postgres_version}}"
+install_dir: "/data/postgres"
+download_dir: "/data"
+extra_args: ""
