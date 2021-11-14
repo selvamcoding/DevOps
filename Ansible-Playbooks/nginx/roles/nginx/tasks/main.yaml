@@ -23,7 +23,7 @@
       - "{{ install_dir }}/logs"
 
 - name: copy nginx source files to destination
-  unarchive: src=http://nginx.org/download/nginx-{{ nginx_version }}.tar.gz  dest={{ download_dir }} mode=0755
+  unarchive: src=http://nginx.org/download/{{ nginx_version }}.tar.gz dest={{ download_dir }} mode=0755 remote_src=True
 
 - name: installing & configuring nginx
   shell: cd {{ download_dir }}/{{ nginx_version }} && ./configure --prefix={{ install_dir }} --user={{ user }} --group={{ group }} --error-log-path={{ install_dir }}/logs/error.log --http-log-path={{ install_dir }}/logs/access.log --pid-path={{install_dir}}/nginx.pid --lock-path={{ install_dir }}/nginx.lock --with-http_ssl_module --with-pcre --with-http_stub_status_module {{ extra_args }} && make && make install
