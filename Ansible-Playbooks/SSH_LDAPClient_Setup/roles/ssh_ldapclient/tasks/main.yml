@@ -1,0 +1,46 @@
+---
+- name: Install openldap client packages
+  yum: name={{ item }} state=latest
+  with_items:
+   - "openldap"
+   - "openldap-clients"
+   - "authconfig"
+   - "nss-pam-ldapd"
+   - "openssh-ldap"
+   - "oddjob"
+   - "oddjob-mkhomedir"
+   - "fprintd-pam"
+
+- name: copy openssh wraper file
+  copy: src=ssh-ldap-wrapper dest=/usr/libexec/openssh/
+
+- name: add user at the end of the file sshd_conf
+  lineinfile: dest=/etc/ssh/sshd_config regexp='^AuthorizedKeysCommand ' insertbefore='^#AuthorizedKeysCommand none' line="AuthorizedKeysCommand /usr/libexec/openssh/ssh-ldap-wrapper"
+  notify:
+   - restart sshd
+
+- name: add AuthorizedKeysCommandUser on centos 7
+  lineinfile: dest=/etc/ssh/sshd_config regexp='^AuthorizedKeysCommandUser' insertbefore='^#AuthorizedKeysCommandUser nobody' line='AuthorizedKeysCommandUser nobody'
+  when: ansible_distribution_major_version == '7'
+  notify:
+   - restart sshd
+  
+- name: copy ldap auth config files
+  copy: src={{ item.src }} dest=/etc/{{ item.dest }} owner=root group=root mode=0644 backup=yes
+  with_items:
+   - { src: 'nsswitch.conf', dest: 'nsswitch.conf' }
+   - { src: 'system-auth', dest: 'pam.d/system-auth' }
+   - { src: 'password-auth', dest: 'pam.d/password-auth' }
+   - { src: 'pam_ldap.conf', dest: 'pam_ldap.conf' }
+   - { src: 'sudo-ldap.conf', dest: 'sudo-ldap.conf' }
+   - { src: 'nslcd.conf', dest: 'nslcd.conf' }
+  notify:
+   - restart nslcd
+   - restart nscd
+   - restart messagebus
+   - restart oddjobd
+
+- name: Create a link to pam_ldap.conf to ldap.conf
+  shell: cp -d /etc/pam_ldap.conf /etc/ldap.conf
+
+- meta: flush_handlers

@@ -1,0 +1,15 @@
+---
+- name: restart nslcd
+  service: name=nslcd state=restarted enabled=yes
+
+- name: restart nscd
+  service: name=nscd state=restarted enabled=yes
+
+- name: restart messagebus
+  service: name=messagebus state=restarted enabled=yes
+
+- name: restart oddjobd
+  service: name=oddjobd state=restarted enabled=yes
+
+- name: restart sshd
+  service: name=sshd state=restarted enabled=yes

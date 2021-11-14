@@ -1,0 +1,8 @@
+---
+user: "elasticsearch"
+group: "{{ user }}"
+es_version: elasticsearch-7.15.2
+es_path: "/data/elasticsearch"
+es_cluster: "es-cluster"
+es_link: "{{ es_path }}/current"
+jvm_memory: "-Xms1g"

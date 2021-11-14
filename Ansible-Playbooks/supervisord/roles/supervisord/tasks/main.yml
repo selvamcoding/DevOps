@@ -1,0 +1,18 @@
+---
+- name: install supervisord
+  yum: name=supervisor state=present
+
+- name: change ulimit value for root user
+  lineinfile: dest=/etc/security/limits.d/supervisord.conf create=yes line="root - nofile 100000" owner=root group=root mode=0644
+
+- name: modify the supervisord conf
+  lineinfile: path=/etc/supervisord.conf regex={{ item.old }} line={{ item.new }}
+  with_items:
+    - {old: '^;\[inet_http_server\]',   new: '[inet_http_server]'  }
+    - {old: '^;port=127.0.0.1:9001',  new: 'port=127.0.0.1:9001' }
+    - {old: '^minfds=',               new: 'minfds=1000000' }
+    - {old: '^minprocs=',             new: 'minprocs=4096' }
+    - {old: '^serverurl=unix',       new: ';serverurl=unix:///var/run/supervisor/supervisor.sock' }
+    - {old: '^;serverurl=http',       new: 'serverurl=http://127.0.0.1:9001' }
+  notify: Restart Supervisord
+

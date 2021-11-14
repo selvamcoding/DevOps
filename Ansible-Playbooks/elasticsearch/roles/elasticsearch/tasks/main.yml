@@ -1,0 +1,48 @@
+---
+- name: create elasticsearch user and directory
+  user: name={{ user }} shell=/sbin/nologin
+
+- name: create elasticsearch install directory
+  file: path={{ es_path }} state=directory mode=0755 owner={{ user }} group={{ group }} recurse=yes
+
+- name: download es package
+  unarchive: src=https://artifacts.elastic.co/downloads/elasticsearch/{{ es_version }}-linux-x86_64.tar.gz dest={{ es_path }} owner={{ user }} group={{ group }} remote_src=yes
+
+- name: change owner of {{ es_version }} directory
+  file: name={{ es_path }}/{{ es_version }} state=directory mode=0755 owner={{ user }} group={{ group }} recurse=yes
+
+- name: check soft link is exist
+  stat: path={{ es_link }}
+  register: eslnk
+
+- name: create link if not present
+  file: src={{ es_path }}/{{ es_version }} dest={{ es_link }} owner={{ user }} group={{ group }} state=link
+  when: eslnk.stat.islnk is not defined
+
+- name: change jvm option
+  lineinfile: path={{ es_path }}/{{ es_version }}/config/jvm.options regexp='^-Xms1g' line={{ jvm_memory }}
+
+- name: adding esconfig
+  lineinfile: path={{ es_path }}/{{ es_version }}/config/elasticsearch.yml regexp={{ item.old }} line={{ item.new }}
+  with_items:
+    - {old: '^cluster.name', new: "cluster.name: {{ es_cluster }}" }
+    - {old: '^node.name', new: "node.name: {{ inventory_hostname }}"}
+    - {old: '^network.host', new: 'network.host: "_site_"'}
+    - {old: '^bootstrap.memory_lock', new: 'bootstrap.memory_lock: true'}
+    - {old: '^discovery.zen.ping_timeout', new: 'discovery.zen.ping_timeout: 5s'}
+
+- name: add sysctl values
+  lineinfile: path=/etc/sysctl.d/es.conf create=yes line={{ item }}
+  with_items:
+    - "vm.max_map_count=262144"
+    - "vm.swappiness=1"
+
+- name: load sysctl file
+  shell: /sbin/sysctl -q -e -p -f /etc/sysctl.d/es.conf
+
+- name: add limits.conf
+  lineinfile: path=/etc/security/limits.d/es.conf create=yes line={{ item }}
+  with_items:
+    - "elasticsearch  -  nofile  65535"
+    - "elasticsearch  -  nproc   4096"
+    - "elasticsearch  -  memlock unlimited"

@@ -1,0 +1,3 @@
+---
+- name: Restart Supervisord
+  service: name=supervisord state=restarted enabled=yes

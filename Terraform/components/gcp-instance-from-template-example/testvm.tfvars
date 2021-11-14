@@ -1,0 +1,5 @@
+region = "us-central1"
+zone = "us-central1-c"
+template_name = "centos-7"
+machine_type = "n1-standard-1"
+vm_name = "tf-test-vm"

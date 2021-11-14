@@ -1,0 +1,35 @@
+---
+- name: installing dependency packages and c compiler for nginx
+  yum: name={{ item }} state=present
+  with_items:
+    - gcc
+    - gcc-c++
+    - make
+    - zlib-devel
+    - pcre
+    - pcre-devel
+    - openssl
+    - openssl-devel
+    - ncurses
+    - ncurses-devel
+
+- name: create nginx user
+  user: name={{ user }} shell=/sbin/nologin
+
+- name: creating the nginx directories
+  file: path={{ item }} state=directory owner={{ user }} group={{ group }} mode=0755
+  with_items:
+      - "{{ install_dir }}"
+      - "{{ install_dir }}/logs"
+
+- name: copy nginx source files to destination
+  unarchive: src=http://nginx.org/download/nginx-{{ nginx_version }}.tar.gz  dest={{ download_dir }} mode=0755
+
+- name: installing & configuring nginx
+  shell: cd {{ download_dir }}/{{ nginx_version }} && ./configure --prefix={{ install_dir }} --user={{ user }} --group={{ group }} --error-log-path={{ install_dir }}/logs/error.log --http-log-path={{ install_dir }}/logs/access.log --pid-path={{install_dir}}/nginx.pid --lock-path={{ install_dir }}/nginx.lock --with-http_ssl_module --with-pcre --with-http_stub_status_module {{ extra_args }} && make && make install
+
+- name: permissions
+  command: sudo chown -R {{ user }}:{{ group }} {{ install_dir }}
+
+- name: remove nginx source directory
+  file: path={{ download_dir }}/{{ nginx_version }} state=absent
