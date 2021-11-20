@@ -1,0 +1,5 @@
+---
+install_dir:  "/usr/local/src"
+### Python >3.9.8 requires openssl 1.1.1 or newer
+py_ver: "3.9.8"
+download_url: "https://www.python.org/ftp/python/{{ py_ver }}/Python-{{ py_ver }}.tgz"

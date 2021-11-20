@@ -1,0 +1,46 @@
+---
+- name: install dependency software for Ubuntu
+  apt: name={{item}} state=latest
+  with_items:
+   - build-essential
+   - libssl-dev
+   - zlib1g-dev
+   - libncurses5-dev
+   - libncursesw5-dev
+   - libreadline-dev
+   - libsqlite3-dev
+   - libgdbm-dev
+   - libdb5.3-dev
+   - libbz2-dev
+   - libexpat1-dev
+   - liblzma-dev
+   - tk-dev
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: install dependency softwares for Centos
+  yum: name={{item}} state=latest
+  with_items:
+   - sqlite-devel
+   - gcc
+   - gcc-c++
+   - python-devel
+   - zlib-devel
+   - openssl-devel
+   - tk-devel
+   - bzip2-devel
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: unarchiving Python package
+  unarchive: src={{ download_url }} dest={{ install_dir }} owner=root group=root mode=0755 remote_src=True
+
+- name: compile python
+  shell: cd {{ install_dir }}/Python-{{ py_ver }} && ./configure --enable-loadable-sqlite-extensions --enable-shared --prefix=/usr/local && make -j4 && make altinstall
+
+- name: Insert the library path to ldconf
+  lineinfile: dest=/etc/ld.so.conf line="/usr/local/lib"
+
+- name: Load new ld config
+  shell: ldconfig
+
+- name: Delete Python Source Directory
+  file: state=absent path="{{ install_dir }}/Python-{{ py_ver }}"
