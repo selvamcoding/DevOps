@@ -1,0 +1,7 @@
+---
+user: redis
+group: "{{ user }}"
+dest_dir: "/data/redis"
+redis_version: "redis-6.2.6"
+download_url: "https://download.redis.io/releases/{{ redis_version }}.tar.gz"
+maxmemory: "1gb"
