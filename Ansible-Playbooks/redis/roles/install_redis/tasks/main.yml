@@ -1,0 +1,86 @@
+---
+- name: copy package requirements
+  copy: src=redis_requirement.txt dest=/root/redis_requirement.txt mode=0644
+
+- name: install require yum packages
+  shell: yum install -y $(cat /root/redis_requirement.txt)
+
+- name: creating local {{ user }} user
+  user: name={{ user }} state=present
+
+- name: create {{ dest_dir }} directory
+  file: path={{ dest_dir }} state=directory owner={{ user }} group={{ group }} mode=0755
+
+- name: unarchive redis {{ redis_version }} package
+  unarchive: src={{ download_url }} dest={{ dest_dir }} owner={{ user }} group={{ group }} remote_src=True
+
+- name: install redis
+  shell: make chdir={{ dest_dir }}/{{ redis_version }}
+
+- name: redis create log directory
+  file: dest={{ dest_dir }}/{{ redis_version }}/{{ item }} state=directory owner={{ user }} group={{ group }} mode=0755
+  with_items:
+    - "logs"
+    - "data"
+    - "bin"
+
+- name: check soft link is exist
+  stat: path={{ dest_dir }}/current
+  register: currentlnk
+
+- name: create link if not present
+  file: src={{ dest_dir }}/{{ redis_version }} dest={{ dest_dir }}/current owner={{ user }} group={{ group }} state=link
+  when: currentlnk.stat.islnk is not defined
+
+- name: copy redis files
+  template: src=redis.service.j2 dest=/etc/systemd/system/redis.service mode=0755
+  notify: Restart Redis Server
+
+- name: make changes in redis.conf
+  lineinfile: dest={{ dest_dir }}/{{ redis_version }}/redis.conf regexp={{ item.old }} line={{ item.new }} owner={{ user }} group={{ group }} mode=0644
+  with_items:
+    - { old: "^daemonize", new: "daemonize yes" }
+    - { old: "^logfile", new: "logfile {{ dest_dir }}/current/logs/redis.log" }
+    - { old: "^pidfile", new: "pidfile {{ dest_dir }}/current/redis.pid" }
+    - { old: "^tcp-backlog", new: "tcp-backlog 50000" }
+    - { old: "^protected-mode", new: "protected-mode no" }
+    - { old: "^timeout", new: "timeout 900" }
+    - { old: "^tcp-keepalive", new: "tcp-keepalive 0" }
+    - { old: "^save", new: "save 1000 20000" }
+    - { old: "^stop-writes-on-bgsave-error", new: "stop-writes-on-bgsave-error no" }
+    - { old: "^dir", new: "dir {{ dest_dir }}/current/data" }
+    - { old: "^repl-timeout", new: "repl-timeout 6000" }
+    - { old: "^maxclients", new: "maxclients 20000" }
+    - { old: "^maxmemory-policy", new: "maxmemory-policy volatile-lru" }
+    - { old: "^maxmemory", new: "maxmemory {{ maxmemory }}" }
+  notify: Restart Redis Server
+
+- name: redis copy binary from src to bin
+  copy: src={{ dest_dir }}/{{ redis_version }}/src/{{ item }} dest={{ dest_dir }}/{{ redis_version }}/bin/{{ item }} mode=0755 owner={{ user }} group={{ group }} remote_src=true
+  with_items:
+    - "redis-benchmark"
+    - "redis-check-aof"
+    - "redis-cli"
+    - "redis-server"
+    - "redis-sentinel"
+
+- name: redis copy binary from src to /usr/local/bin
+  copy: src={{ dest_dir }}/{{ redis_version }}/src/{{ item }} dest=/usr/local/bin/{{ item }} mode=0755 owner={{ user }} group={{ group }} remote_src=true
+  with_items:
+    - "redis-benchmark"
+    - "redis-check-aof"
+    - "redis-cli"
+    - "redis-server"
+    - "redis-sentinel"
+
+- name: ensure permissions for redis dir
+  shell: chown -R {{ user }}:{{ group }} {{ dest_dir }}/{{ redis_version }}
+
+- name: adding THP disable in /etc/rc.local
+  lineinfile: dest=/etc/rc.local line="echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+
+- name : execute the never for redis hugepages
+  shell : echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+- name: install ruby and its gems
+  script: install_ruby_gems.sh

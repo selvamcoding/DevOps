@@ -1,0 +1,15 @@
+[Unit]
+Description=Redis persistent key-value database
+After=network.target
+
+[Service]
+ExecStart={{ dest_dir }}/current/bin/redis-server {{ dest_dir }}/current/redis.conf --daemonize no
+ExecStop={{ dest_dir }}/current/bin/redis-cli shutdown
+User={{ user }}
+Group={{ group }}
+RuntimeDirectory={{ dest_dir }}/current
+RuntimeDirectoryMode=0755
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
