@@ -2,11 +2,12 @@
 
 import time
 from multiprocessing import Process, Queue
-import subprocess
+import subprocess as sp
 import os
 import signal
 from datetime import datetime
-
+import smtplib
+from email.mime.text import MIMEText
 
 def checkpid(pid):
     try:
@@ -22,8 +23,9 @@ def runcmd(cmd, secs, queue):
     dt = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print("{} Executing {}".format(dt, cmd))
     start = time.time()
-    result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    queue.put([cmd, result.pid, start])
+    result = sp.Popen(cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+    output = result.communicate()
+    queue.put([cmd, result.pid, start, output])
 
 
 class GracefulKiller:
@@ -35,6 +37,20 @@ class GracefulKiller:
 
     def exit_gracefully(self, signum, frame):
         self.kill_now = True
+
+
+def send_email(message):
+    sender = "fromaddress@email.com"
+    receivers = "toaddress@email.com"
+    msg = MIMEText(message)
+    msg['Subject'] = "Error in executing Rsync on 127.0.0.1"
+    msg['From'] = sender
+    msg['To'] = receivers
+
+    smtp = smtplib.SMTP('localhost', 25)
+    smtp.sendmail(sender, receivers, msg.as_string())
+    print("Successfully sent email")
+    smtp.quit()
 
 
 if __name__ == "__main__":
@@ -58,6 +74,11 @@ if __name__ == "__main__":
                 end = time.time()
                 execTime = int(end - val[2])
                 print("{} execution time {} seconds".format(val[0], execTime))
+                if val[3][1]:
+                    errormsg = "Error Executing {} command\n{}".format(val[0], val[3][1])
+                    print(errormsg)
+                    send_email(errormsg)
+
                 if execTime > runInterval:
                     Process(target=runcmd, args=(val[0], 0, queue,)).start()
                 else:

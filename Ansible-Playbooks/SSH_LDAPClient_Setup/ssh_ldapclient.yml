@@ -1,7 +1,0 @@
----
-- hosts: all
-  user: "{{ ansible_user }}"
-  gather_facts: no
-  become: yes
-  roles:
-    - ssh_ldapclient

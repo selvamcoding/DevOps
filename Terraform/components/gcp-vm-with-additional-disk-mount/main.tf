@@ -11,9 +11,9 @@ module "vm-additional-disk" {
 
 resource "google_compute_disk" "data" {
   name = "${var.vm_name}-data"
-  type = "pd-ssd"
+  type = var.addtional_disk_type
   zone = var.zone
-  size = "200"
+  size = var.additional_disk_size
 }
 
 resource "google_compute_attached_disk" "attach_ssd" {

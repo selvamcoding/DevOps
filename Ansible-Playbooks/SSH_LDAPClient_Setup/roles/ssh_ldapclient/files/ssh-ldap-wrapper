@@ -1,2 +1,0 @@
-#!/bin/sh
-exec /usr/libexec/openssh/ssh-ldap-helper -f /etc/pam_ldap.conf -s "$1"

@@ -18,3 +18,7 @@ variable "private_key" {
   default = "~/.ssh/id_rsa"
 }
 
+variable "addtional_disk_type" {}
+
+variable "additional_disk_size" {}
+
